@@ -109,6 +109,9 @@ typedef int (*http_cb) (http_parser*);
   /* RFC-5789 */                    \
   XX(24, PATCH,       PATCH)        \
   XX(25, PURGE,       PURGE)        \
+  /* RFC-2068 */                    \
+  XX(26, LINK,        LINK)         \
+  XX(27, UNLINK,      UNLINK)       \
 
 enum http_method
   {

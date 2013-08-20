@@ -888,7 +888,7 @@ size_t http_parser_execute (http_parser *parser,
           case 'D': parser->method = HTTP_DELETE; break;
           case 'G': parser->method = HTTP_GET; break;
           case 'H': parser->method = HTTP_HEAD; break;
-          case 'L': parser->method = HTTP_LOCK; break;
+          case 'L': parser->method = HTTP_LOCK; /* or LINK */ break;
           case 'M': parser->method = HTTP_MKCOL; /* or MOVE, MKACTIVITY, MERGE, M-SEARCH */ break;
           case 'N': parser->method = HTTP_NOTIFY; break;
           case 'O': parser->method = HTTP_OPTIONS; break;
@@ -898,7 +898,7 @@ size_t http_parser_execute (http_parser *parser,
           case 'R': parser->method = HTTP_REPORT; break;
           case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH */ break;
           case 'T': parser->method = HTTP_TRACE; break;
-          case 'U': parser->method = HTTP_UNLOCK; /* or UNSUBSCRIBE */ break;
+          case 'U': parser->method = HTTP_UNLOCK; /* or UNSUBSCRIBE, UNLOCK */ break;
           default:
             SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
@@ -949,21 +949,42 @@ size_t http_parser_execute (http_parser *parser,
           } else {
             goto error;
           }
-        } else if (parser->index == 1 && parser->method == HTTP_POST) {
-          if (ch == 'R') {
-            parser->method = HTTP_PROPFIND; /* or HTTP_PROPPATCH */
-          } else if (ch == 'U') {
-            parser->method = HTTP_PUT; /* or HTTP_PURGE */
-          } else if (ch == 'A') {
-            parser->method = HTTP_PATCH;
-          } else {
-            goto error;
+        } else if (parser->index == 1) {
+          if (parser->method == HTTP_POST) {
+            if (ch == 'R') {
+              parser->method = HTTP_PROPFIND; /* or HTTP_PROPPATCH */
+            } else if (ch == 'U') {
+              parser->method = HTTP_PUT; /* or HTTP_PURGE */
+            } else if (ch == 'A') {
+              parser->method = HTTP_PATCH;
+            } else {
+              goto error;
+            }
+          } else if(parser->method == HTTP_LOCK) {
+            if (ch == 'I') {
+              parser->method = HTTP_LINK;
+            } else {
+              SET_ERRNO(HPE_INVALID_METHOD);
+              goto error;
+            }
           }
         } else if (parser->index == 2) {
           if (parser->method == HTTP_PUT) {
             if (ch == 'R') parser->method = HTTP_PURGE;
           } else if (parser->method == HTTP_UNLOCK) {
-            if (ch == 'S') parser->method = HTTP_UNSUBSCRIBE;
+            if (ch == 'S') {
+              parser->method = HTTP_UNSUBSCRIBE;
+            } else {
+              SET_ERRNO(HPE_INVALID_METHOD);
+              goto error;
+            }
+          }
+        } else if (parser->index == 3 && parser->method == HTTP_UNLOCK) {
+          if (ch == 'I') {
+            parser->method = HTTP_UNLINK;
+          } else {
+            SET_ERRNO(HPE_INVALID_METHOD);
+            goto error;
           }
         } else if (parser->index == 4 && parser->method == HTTP_PROPFIND && ch == 'P') {
           parser->method = HTTP_PROPPATCH;
